@@ -88,7 +88,7 @@ export default function Navbar() {
             <button
               onClick={handleLogout}
                className={`px-3 py-1 ${
-                pathname === '/about'
+                pathname === '/logout'
                   ? 'text-white font-bold'
                   : 'text-gray-400 hover:text-gray-200'
               }`}

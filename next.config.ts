@@ -1,9 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-};
-module.exports = {
+  images: {
+    domains: [], // tambahkan domain jika menggunakan external images
+    unoptimized: false, // set true jika ada masalah optimisasi
+  },
   async rewrites() {
     return [
       {
@@ -13,6 +14,5 @@ module.exports = {
     ];
   },
 };
-
 
 export default nextConfig;

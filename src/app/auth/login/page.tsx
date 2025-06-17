@@ -50,7 +50,7 @@ export default function Login() {
     <div className="relative flex min-h-screen">
       {/* Background image */}
       <Image
-      src="/assets/signin.jpg"
+      src="/assets/signin.png"
       alt="Background"
       fill
       className="z-0 object-cover"
@@ -58,8 +58,6 @@ export default function Login() {
       priority
     />
 
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-black bg-opacity-60 z-10" />
 
       {/* Content */}
       <ToastContainer />

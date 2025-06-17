@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import Footer from "@/components/layout/footer";
 import Navbar from "@/components/layout/Navbar";
-import Aboutbg from "../../../public/assets/bg-about.jpg"
 import { FaUsers, FaGraduationCap, FaCheckCircle } from "react-icons/fa";
 
 const AboutUs = () => {
@@ -30,19 +29,17 @@ const AboutUs = () => {
       <div
         className="relative h-screen bg-cover bg-center"
         style={{
-          backgroundImage: `url('/assets/bg-about.jpg')`, 
+          backgroundImage: `url('/assets/bg-about.png')`, 
           backgroundPosition: `center ${scrollY * 0.5}px`, // Parallax effect
         }}
       >
-        {/* Overlay */}
-        <div className="absolute inset-0 bg-black bg-opacity-50"></div>
 
         {/* Content */}
         <div className="relative z-10 flex flex-col items-start justify-center h-full text-white px-8">
-          <h1 className="text-3xl md:text-4xl font-extrabold mb-4">
+          <h1 className="text-3xl md:text-4xl text-gray-800 font-extrabold mb-4">
             About ScholarHub
           </h1>
-          <p className="text-sm md:text-base font-light max-w-md">
+          <p className="text-sm md:text-base text-gray-800 font-light max-w-md">
             Welcome to ScholarHub – where opportunities meet potential!
           </p>
         </div>

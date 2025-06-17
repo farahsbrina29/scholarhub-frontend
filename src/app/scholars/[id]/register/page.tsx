@@ -10,7 +10,7 @@ type FormData = {
   name: string;
   studentId: string;
   email: string;
-  studyProgram : string;
+  studyProgram: string;
   semester: string;
   reason: string;
   document: File | null;
@@ -34,8 +34,7 @@ export default function ScholarshipRegistrationForm({
 
   const [scholarshipTitle, setScholarshipTitle] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [isAlreadyRegistered, setIsAlreadyRegistered] =
-    useState<boolean>(false);
+  const [isAlreadyRegistered, setIsAlreadyRegistered] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
@@ -48,7 +47,7 @@ export default function ScholarshipRegistrationForm({
         const all = await scholarRegistAPI.getAll();
         const existing = all.find(
           (item: any) =>
-            item.scholar_id === parseInt(id) &&
+            item.scholarId === parseInt(id) &&
             item.email === formData.email
         );
         if (existing) {
@@ -75,19 +74,11 @@ export default function ScholarshipRegistrationForm({
       toast.error("File size exceeds 2 MB.");
       return;
     }
-    setFormData((prev) => ({ ...prev, dokumen: file }));
-  };
-
-  const formatDate = (date: Date): string => {
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const year = date.getFullYear();
-    return `${day}-${month}-${year}`;
+    setFormData((prev) => ({ ...prev, document: file }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     const { id } = await params;
 
     if (
@@ -96,7 +87,8 @@ export default function ScholarshipRegistrationForm({
       !formData.email ||
       !formData.studyProgram ||
       !formData.semester ||
-      !formData.reason
+      !formData.reason ||
+      !formData.document
     ) {
       toast.error("Please fill all required fields.");
       return;
@@ -104,22 +96,18 @@ export default function ScholarshipRegistrationForm({
 
     setIsSubmitting(true);
     try {
-      // Placeholder dokumen
-      const dokumenUrl = "https://example.com/dummy-document.pdf";
+      // Simulasi dokumen file name (karena belum ada upload server)
+      const documentFilename = formData.document.name;
 
       const payload = {
-        nama: formData.name,
-        nim: formData.studentId,
+        name: formData.name,
+        studentId: formData.studentId,
         email: formData.email,
-        program_studi: formData.studyProgram,
-        semester: formData.semester,
-        alasan_mendaftar: formData.reason,
-        dokumen: dokumenUrl,
-        tanggal_pendaftaran: formatDate(new Date()),
-        nama_beasiswa: scholarshipTitle,
-        scholar_id: parseInt(id),
-        status: "menunggu persetujuan",
-        catatan_admin: "",
+        studyProgram: formData.studyProgram,
+        semester: parseInt(formData.semester),
+        note: formData.reason,
+        document: documentFilename,
+        scholarId: parseInt(id),
       };
 
       await scholarRegistAPI.create(payload);
@@ -169,84 +157,86 @@ export default function ScholarshipRegistrationForm({
         ) : (
           <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-5">
             <div>
-              <label className="block text-base font-medium mb-1" htmlFor="nama">
+              <label className="block font-medium mb-1" htmlFor="name">
                 Full Name*
               </label>
               <input
                 type="text"
-                id="nama"
+                id="name"
+                name="name"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-md"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-base font-medium mb-1" htmlFor="nim">
+              <label className="block font-medium mb-1" htmlFor="studentId">
                 Student ID (NIM)*
               </label>
               <input
                 type="text"
-                id="nim"
+                id="studentId"
+                name="studentId"
                 value={formData.studentId}
-                onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
+                onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-md"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-base font-medium mb-1" htmlFor="email">
+              <label className="block font-medium mb-1" htmlFor="email">
                 Email*
               </label>
               <input
                 type="email"
                 id="email"
+                name="email"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-md"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-base font-medium mb-1" htmlFor="program_studi">
+              <label className="block font-medium mb-1" htmlFor="studyProgram">
                 Study Program*
               </label>
               <input
                 type="text"
-                id="program_studi"
+                id="studyProgram"
+                name="studyProgram"
                 value={formData.studyProgram}
-                onChange={(e) =>
-                  setFormData({ ...formData, studyProgram: e.target.value })
-                }
+                onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-md"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-base font-medium mb-1" htmlFor="semester">
+              <label className="block font-medium mb-1" htmlFor="semester">
                 Semester*
               </label>
               <input
                 type="number"
                 id="semester"
+                name="semester"
                 value={formData.semester}
-                onChange={(e) =>
-                  setFormData({ ...formData, semester: e.target.value })
-                }
+                onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-md"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-base font-medium mb-1">
-                Reason for Applying
+              <label className="block font-medium mb-1" htmlFor="reason">
+                Reason for Applying*
               </label>
               <textarea
+                id="reason"
                 name="reason"
                 value={formData.reason}
                 onChange={handleInputChange}
@@ -257,12 +247,13 @@ export default function ScholarshipRegistrationForm({
             </div>
 
             <div>
-              <label className="block text-base font-medium mb-1">
-                Upload Supporting Documents*
+              <label className="block font-medium mb-1" htmlFor="document">
+                Upload Supporting Document*
               </label>
               <input
                 type="file"
-                name="dokumen"
+                id="document"
+                name="document"
                 onChange={handleFileChange}
                 className="w-full px-4 py-2"
                 required
