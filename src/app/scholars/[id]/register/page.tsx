@@ -13,7 +13,6 @@ type FormData = {
   studyProgram: string;
   semester: string;
   reason: string;
-  document: File | null;
 };
 
 export default function ScholarshipRegistrationForm({
@@ -29,7 +28,6 @@ export default function ScholarshipRegistrationForm({
     studyProgram: "",
     semester: "",
     reason: "",
-    document: null,
   });
 
   const [scholarshipTitle, setScholarshipTitle] = useState<string>("");
@@ -68,14 +66,6 @@ export default function ScholarshipRegistrationForm({
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
-    if (file && file.size > 2 * 1024 * 1024) {
-      toast.error("File size exceeds 2 MB.");
-      return;
-    }
-    setFormData((prev) => ({ ...prev, document: file }));
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,8 +77,7 @@ export default function ScholarshipRegistrationForm({
       !formData.email ||
       !formData.studyProgram ||
       !formData.semester ||
-      !formData.reason ||
-      !formData.document
+      !formData.reason 
     ) {
       toast.error("Please fill all required fields.");
       return;
@@ -96,8 +85,7 @@ export default function ScholarshipRegistrationForm({
 
     setIsSubmitting(true);
     try {
-      // Simulasi dokumen file name (karena belum ada upload server)
-      const documentFilename = formData.document.name;
+  
 
       const payload = {
         name: formData.name,
@@ -106,7 +94,6 @@ export default function ScholarshipRegistrationForm({
         studyProgram: formData.studyProgram,
         semester: parseInt(formData.semester),
         note: formData.reason,
-        document: documentFilename,
         scholarId: parseInt(id),
       };
 
@@ -244,21 +231,6 @@ export default function ScholarshipRegistrationForm({
                 rows={4}
                 required
               />
-            </div>
-
-            <div>
-              <label className="block font-medium mb-1" htmlFor="document">
-                Upload Supporting Document*
-              </label>
-              <input
-                type="file"
-                id="document"
-                name="document"
-                onChange={handleFileChange}
-                className="w-full px-4 py-2"
-                required
-              />
-              <p className="text-sm text-gray-500 mt-1">Max file size: 2 MB.</p>
             </div>
 
             <button

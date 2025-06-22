@@ -48,12 +48,12 @@ const FilterSection: React.FC<FilterSectionProps> = ({
           className="flex justify-between items-center w-full text-left text-lg font-medium text-black border-b border-gray-300 pb-2"
           onClick={() => setIsActiveDropdownOpen(!isActiveDropdownOpen)}
         >
-          Masa Aktif
+          Active Period
           <span>{isActiveDropdownOpen ? "▲" : "▼"}</span>
         </button>
         {isActiveDropdownOpen && (
           <div className="mt-2 space-y-2">
-            {["Masih Berlangsung", "Akan Berakhir"].map((option) => (
+            {["On Going", "Will Expired"].map((option) => (
               <label
                 key={option}
                 className="flex items-center space-x-2 text-black"
@@ -67,37 +67,6 @@ const FilterSection: React.FC<FilterSectionProps> = ({
                 <span>{option}</span>
               </label>
             ))}
-          </div>
-        )}
-      </div>
-
-      {/* Dropdown Jenis Beasiswa */}
-      <div className="mb-4">
-        <button
-          className="flex justify-between items-center w-full text-left text-lg font-medium text-black border-b border-gray-300 pb-2"
-          onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
-        >
-          Jenis Beasiswa
-          <span>{isCategoryDropdownOpen ? "▲" : "▼"}</span>
-        </button>
-        {isCategoryDropdownOpen && (
-          <div className="mt-2 space-y-2">
-            {["Akademik", "Non Akademik", "Bantuan", "Penelitian"].map(
-              (option) => (
-                <label
-                  key={option}
-                  className="flex items-center space-x-2 text-black"
-                >
-                  <input
-                    type="checkbox"
-                    className="form-checkbox"
-                    checked={selectedCategoryFilters.includes(option)}
-                    onChange={() => handleFilterChange("category", option)}
-                  />
-                  <span>{option}</span>
-                </label>
-              )
-            )}
           </div>
         )}
       </div>

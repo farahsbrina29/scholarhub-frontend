@@ -5,179 +5,169 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
 import HeroSection from '@/components/layout/heroSection';
 import Footer from '@/components/layout/footer';
-import { toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 import FilterSection from '@/components/home/FilterSection';
 import ScholarshipCard from '@/components/home/ScholarshipCard';
 import { getScholarshipStatus } from '@/utility/scholarshipdatautility';
-import { getScholars } from '@/services/api';
+import { authAPI, scholarAPI } from '@/services/api';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+}
+
+interface Scholarship {
+  id: string;
+  scholarName: string;
+  startDate: string;
+  endDate: string;
+  description: string;
+  category: string;
+  tanggal_mulai: string;
+  tanggal_akhir: string;
+  kategori: string;
+}
 
 export default function Home() {
   const router = useRouter();
-  const [scholarships, setScholarships] = useState<any[]>([]);
-  const [isActiveDropdownOpen, setIsActiveDropdownOpen] = useState(true);
-  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(true);
+  const [scholarships, setScholarships] = useState<Scholarship[]>([]);
   const [selectedActiveFilters, setSelectedActiveFilters] = useState<string[]>([]);
   const [selectedCategoryFilters, setSelectedCategoryFilters] = useState<string[]>([]);
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isCheckingAuth, setIsCheckingAuth] = useState<boolean>(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  // Fungsi refresh token tanpa utils
-  const refreshAccessToken = async (): Promise<string | null> => {
-    const refresh_token = localStorage.getItem('refresh_token');
-    if (!refresh_token) return null;
-
+  // ✅ Autentikasi & Refresh Token
+  useEffect(() => {
+  const checkAuth = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/refresh`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh_token }),
-      });
-
-      if (!response.ok) return null;
-
-      const data = await response.json();
-      if (data.access_token) {
-        localStorage.setItem('access_token', data.access_token);
-        return data.access_token;
+      const res = await authAPI.me();
+      if (res.user) {
+        if (res.user.role !== 'USER') {
+          toast.error('Akses hanya untuk pengguna.');
+          router.push('/admin'); // Atau arahkan ke halaman lain
+          return;
+        }
+        setUser(res.user);
+      } else {
+        router.push('/auth/login');
       }
-
-      return null;
-    } catch (error) {
-      console.error('❌ Gagal refresh token:', error);
-      return null;
+    } catch {
+      try {
+        const refreshRes = await authAPI.refreshToken();
+        if (refreshRes.user) {
+          if (refreshRes.user.role !== 'USER') {
+            toast.error('Akses hanya untuk pengguna.');
+            router.push('/auth/login'); 
+            return;
+          }
+          setUser(refreshRes.user);
+        } else {
+          router.push('/auth/login');
+        }
+      } catch {
+        router.push('/auth/login');
+      }
+    } finally {
+      setIsCheckingAuth(false);
     }
   };
 
-  // Auth check
+  checkAuth();
+}, [router]);
+
+
+  // ✅ Ambil Beasiswa
   useEffect(() => {
-    const checkAuthentication = async () => {
-      try {
-        let token = localStorage.getItem('access_token');
-        if (!token) throw new Error('Token tidak ditemukan');
-
-        const tokenParts = token.split('.');
-        if (tokenParts.length === 3) {
-          const payload = JSON.parse(atob(tokenParts[1]));
-          const currentTime = Date.now() / 1000;
-
-          if (payload.exp && payload.exp < currentTime) {
-            console.log('⚠️ Token expired, mencoba refresh...');
-            const newToken = await refreshAccessToken();
-            if (!newToken) throw new Error('Refresh gagal');
-            token = newToken;
-          }
-        }
-
-        setIsLoggedIn(true);
-      } catch (error) {
-        console.warn('❌ Gagal autentikasi:', error);
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        toast.error('Silakan login kembali.');
-        router.push('/auth/login');
-      } finally {
-        setIsCheckingAuth(false);
-      }
-    };
-
-    checkAuthentication();
-  }, [router]);
-
-  // Fetch scholarships
-  useEffect(() => {
-    if (!isLoggedIn || isCheckingAuth) return;
+    if (isCheckingAuth || !user) return;
 
     const fetchScholarships = async () => {
       setIsLoading(true);
       try {
-        const data = await getScholars();
-        setScholarships(data);
+        const data = await scholarAPI.getAll();
+        setScholarships(Array.isArray(data) ? data : []);
       } catch (error: any) {
-        console.error('❌ Gagal fetch:', error);
-        if (error.response?.status === 401) {
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
-          toast.error('Sesi Anda telah berakhir. Silakan login kembali.');
-          router.push('/auth/login');
-        } else {
-          toast.error('Gagal memuat data beasiswa.');
-        }
+        console.error('❌ Gagal memuat beasiswa:', error);
+        toast.error('Gagal memuat data beasiswa.', {
+          position: 'top-center',
+          autoClose: 3000,
+        });
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchScholarships();
-  }, [isLoggedIn, isCheckingAuth, router]);
+  }, [isCheckingAuth, user]);
 
-  const handleFilterChange = (filterType: string, value: string) => {
-    if (filterType === 'active') {
-      setSelectedActiveFilters((prev) =>
-        prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]
+  const handleFilterChange = (type: string, value: string) => {
+    if (type === 'active') {
+      setSelectedActiveFilters(prev =>
+        prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]
       );
-    } else if (filterType === 'category') {
-      setSelectedCategoryFilters((prev) =>
-        prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]
+    } else if (type === 'category') {
+      setSelectedCategoryFilters(prev =>
+        prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]
       );
     }
   };
 
-  const resetFilters = () => {
-    setSelectedActiveFilters([]);
-    setSelectedCategoryFilters([]);
-  };
+  const filteredScholarships = scholarships.filter(scholar => {
+    const status = getScholarshipStatus(
+      scholar.tanggal_mulai || scholar.startDate,
+      scholar.tanggal_akhir || scholar.endDate
+    );
 
-  const filteredScholarships = scholarships.filter((scholarship) => {
-    const status = getScholarshipStatus(scholarship.tanggal_mulai, scholarship.tanggal_akhir);
     const isActiveMatch =
       selectedActiveFilters.length === 0 ||
       (selectedActiveFilters.includes('Masih Berlangsung') && status === 'Active') ||
       (selectedActiveFilters.includes('Akan Berakhir') && status === 'Inactive');
+
     const isCategoryMatch =
-      selectedCategoryFilters.length === 0 || selectedCategoryFilters.includes(scholarship.kategori);
+      selectedCategoryFilters.length === 0 ||
+      selectedCategoryFilters.includes(scholar.kategori || scholar.category);
 
     return isActiveMatch && isCategoryMatch;
   });
 
-  const handleCardClick = (id: string) => {
-    window.location.href = `/scholars/${id}`;
-  };
-
   if (isCheckingAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-6"></div>
-          <h2 className="text-xl font-semibold text-gray-700 mb-2">Memverifikasi Akses</h2>
-          <p className="text-gray-600">Mohon tunggu sebentar...</p>
+          <div className="animate-spin rounded-full h-14 w-14 border-b-2 border-blue-500 mx-auto mb-6"></div>
+          <h2 className="text-xl font-bold text-gray-800">Memverifikasi sesi...</h2>
+          <p className="text-sm text-gray-500">Mohon tunggu sebentar.</p>
         </div>
       </div>
     );
   }
 
-  if (!isLoggedIn) return null;
-
   return (
     <div>
+      <ToastContainer />
       <Navbar />
       <HeroSection />
-      <div className="bg-white py-16 px-16 mt-10">
+      <div className="bg-white py-16 px-6 md:px-16 mt-10">
         <div className="flex justify-between items-center mb-12">
           <h1 className="text-4xl font-bold text-blue-900">Found Scholar</h1>
         </div>
 
         <div className="flex flex-col md:flex-row gap-8">
           <FilterSection
-            isActiveDropdownOpen={isActiveDropdownOpen}
-            setIsActiveDropdownOpen={setIsActiveDropdownOpen}
-            isCategoryDropdownOpen={isCategoryDropdownOpen}
-            setIsCategoryDropdownOpen={setIsCategoryDropdownOpen}
+            isActiveDropdownOpen={true}
+            setIsActiveDropdownOpen={() => {}}
+            isCategoryDropdownOpen={true}
+            setIsCategoryDropdownOpen={() => {}}
             selectedActiveFilters={selectedActiveFilters}
             selectedCategoryFilters={selectedCategoryFilters}
             handleFilterChange={handleFilterChange}
-            resetFilters={resetFilters}
+            resetFilters={() => {
+              setSelectedActiveFilters([]);
+              setSelectedCategoryFilters([]);
+            }}
           />
 
           <div className="flex-1">
@@ -188,27 +178,23 @@ export default function Home() {
               </div>
             ) : filteredScholarships.length > 0 ? (
               <>
-                <div
-                  className={`grid ${
-                    filteredScholarships.length === 1 ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'
-                  } gap-8`}
-                >
-                  {filteredScholarships.slice(0, 6).map((scholarship) => (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {filteredScholarships.slice(0, 6).map(s => (
                     <ScholarshipCard
-                      key={scholarship.id}
-                      id={scholarship.id}
-                      scholarName={scholarship.scholarName}
-                      startDate={scholarship.startDate}
-                      endDate={scholarship.endDate}
-                      description={scholarship.description}
-                      category={scholarship.category}
-                      onClick={handleCardClick}
+                      key={s.id}
+                      id={s.id}
+                      scholarName={s.scholarName}
+                      startDate={s.startDate || s.tanggal_mulai}
+                      endDate={s.endDate || s.tanggal_akhir}
+                      description={s.description}
+                      category={s.category || s.kategori}
+                      onClick={() => router.push(`/scholars/${s.id}`)}
                     />
                   ))}
                 </div>
                 <div className="flex justify-end mt-8">
                   <button
-                    className="text-blue-600 font-semibold hover:underline transition-colors duration-200"
+                    className="text-blue-600 font-semibold hover:underline"
                     onClick={() => router.push('/scholars')}
                   >
                     View More &gt;
@@ -222,7 +208,7 @@ export default function Home() {
                 </p>
                 <button
                   onClick={() => window.location.reload()}
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200"
+                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                 >
                   Muat Ulang
                 </button>

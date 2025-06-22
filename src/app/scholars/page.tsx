@@ -75,18 +75,9 @@ export default function ScholarPage() {
               onChange={e => setSelectedMasaAktif(e.target.value)}
               className="border rounded-md px-4 py-2 focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">Masa Aktif</option>
-              <option value="Sedang Berlangsung">Sedang Berlangsung</option>
-              <option value="Akan Berakhir">Akan Berakhir</option>
-            </select>
-            <select
-              value={selectedJenis}
-              onChange={e => setSelectedJenis(e.target.value)}
-              className="border rounded-md px-4 py-2 focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Jenis Beasiswa</option>
-              <option value="Lingkungan">Lingkungan</option>
-              <option value="Akademik">Akademik</option>
+              <option value="">Active Period</option>
+              <option value="Sedang Berlangsung">On Going</option>
+              <option value="Akan Berakhir">Expired</option>
             </select>
           </div>
 
