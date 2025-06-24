@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Head from "next/head";
-import { scholarAPI, scholarRegistAPI } from "@/services/api";
+import { scholarAPI, scholarRegistAPI, authAPI } from "@/services/api";
 
 type FormData = {
   name: string;
@@ -20,7 +20,7 @@ export default function ScholarshipRegistrationForm({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const params = React.use(asyncParams);
+  const [scholarId, setScholarId] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({
     name: "",
     studentId: "",
@@ -30,6 +30,7 @@ export default function ScholarshipRegistrationForm({
     reason: "",
   });
 
+  const [userId, setUserId] = useState<number | null>(null);
   const [scholarshipTitle, setScholarshipTitle] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isAlreadyRegistered, setIsAlreadyRegistered] = useState<boolean>(false);
@@ -37,27 +38,38 @@ export default function ScholarshipRegistrationForm({
 
   useEffect(() => {
     (async () => {
-      const { id } = await params;
       try {
+        const { id } = await asyncParams;
+        setScholarId(id);
+
+        // 1) Panggil me() dan unpack user
+        const authRes = await authAPI.me();
+        console.log("raw me response:", authRes);
+        const userObj = authRes.user ?? authRes;
+        setUserId(userObj.id);
+
+        // 2) Ambil detail scholarship
         const scholarship = await scholarAPI.getById(id);
         setScholarshipTitle(scholarship.scholarName || "Beasiswa");
 
+        // 3) Cek apakah sudah terdaftar
         const all = await scholarRegistAPI.getAll();
         const existing = all.find(
           (item: any) =>
-            item.scholarId === parseInt(id) &&
-            item.email === formData.email
+            item.scholarId === parseInt(id, 10) &&
+            item.userId === userObj.id              // <-- gunakan userObj.id
         );
         if (existing) {
           setIsAlreadyRegistered(true);
         }
       } catch (err) {
-        console.error("Error fetching scholarship or registration:", err);
+        console.error("Error fetching data:", err);
+        toast.error("Failed to load scholarship data.");
       } finally {
         setIsLoading(false);
       }
     })();
-  }, [params, formData.email]);
+  }, [asyncParams]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -66,57 +78,72 @@ export default function ScholarshipRegistrationForm({
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { id } = await params;
 
-    if (
-      !formData.name ||
-      !formData.studentId ||
-      !formData.email ||
-      !formData.studyProgram ||
-      !formData.semester ||
-      !formData.reason 
-    ) {
-      toast.error("Please fill all required fields.");
+    if (!scholarId || userId == null) {
+      toast.error("Invalid scholarship or user data.");
+      return;
+    }
+
+    // Validasi singkat
+    const errs: string[] = [];
+    if (!formData.name.trim()) errs.push("Name is required");
+    if (!formData.studentId.trim()) errs.push("Student ID is required");
+    if (!formData.email.trim()) errs.push("Email is required");
+    if (!formData.studyProgram.trim()) errs.push("Study Program is required");
+    if (!formData.semester.trim()) errs.push("Semester is required");
+    if (!formData.reason.trim()) errs.push("Reason is required");
+    if (errs.length) {
+      toast.error(errs.join("\n"));
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
+    const semNum = parseInt(formData.semester, 10);
+    if (isNaN(semNum) || semNum < 1 || semNum > 14) {
+      toast.error("Semester must be between 1 and 14");
       return;
     }
 
     setIsSubmitting(true);
     try {
-  
-
       const payload = {
-        name: formData.name,
-        studentId: formData.studentId,
-        email: formData.email,
-        studyProgram: formData.studyProgram,
-        semester: parseInt(formData.semester),
-        note: formData.reason,
-        scholarId: parseInt(id),
+        name: formData.name.trim(),
+        studentId: formData.studentId.trim(),
+        email: formData.email.trim().toLowerCase(),
+        studyProgram: formData.studyProgram.trim(),
+        semester: semNum,
+        note: formData.reason.trim(),
+        scholarId: parseInt(scholarId, 10),
+        userId: userId,                           // <-- kirim userId yang benar
       };
 
+      console.log("📤 Payload:", payload);
       await scholarRegistAPI.create(payload);
 
       toast.success("Registration submitted successfully!");
-      setTimeout(() => {
-        window.location.href = "/status";
-      }, 2000);
-    } catch (error) {
-      console.error("Failed to submit:", error);
+      setTimeout(() => (window.location.href = "/status"), 1500);
+    } catch (error: any) {
+      console.error("Registration failed:", error);
       toast.error("Failed to submit registration.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (isLoading)
+  if (isLoading) {
     return (
       <div className="w-full text-center mt-20 text-xl font-semibold">
         Loading form...
       </div>
     );
+  }
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-10">
@@ -135,7 +162,7 @@ export default function ScholarshipRegistrationForm({
               You have already registered for this scholarship.
             </p>
             <button
-              onClick={() => (window.location.href = `/status`)}
+              onClick={() => (window.location.href = "/status")}
               className="bg-blue-600 text-white px-6 py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition"
             >
               Go to Status Page
@@ -143,12 +170,12 @@ export default function ScholarshipRegistrationForm({
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-5">
+            {/* Input fields */}
             <div>
-              <label className="block font-medium mb-1" htmlFor="name">
+              <label htmlFor="name" className="block mb-1 font-medium">
                 Full Name*
               </label>
               <input
-                type="text"
                 id="name"
                 name="name"
                 value={formData.name}
@@ -157,7 +184,6 @@ export default function ScholarshipRegistrationForm({
                 required
               />
             </div>
-
             <div>
               <label className="block font-medium mb-1" htmlFor="studentId">
                 Student ID (NIM)*
@@ -168,7 +194,7 @@ export default function ScholarshipRegistrationForm({
                 name="studentId"
                 value={formData.studentId}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 border rounded-md"
+                className="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
               />
             </div>
@@ -183,7 +209,7 @@ export default function ScholarshipRegistrationForm({
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 border rounded-md"
+                className="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
               />
             </div>
@@ -198,7 +224,7 @@ export default function ScholarshipRegistrationForm({
                 name="studyProgram"
                 value={formData.studyProgram}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 border rounded-md"
+                className="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
               />
             </div>
@@ -207,15 +233,19 @@ export default function ScholarshipRegistrationForm({
               <label className="block font-medium mb-1" htmlFor="semester">
                 Semester*
               </label>
-              <input
-                type="number"
+              <select
                 id="semester"
                 name="semester"
                 value={formData.semester}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2 border rounded-md"
+                onChange={(e) => setFormData(prev => ({ ...prev, semester: e.target.value }))}
+                className="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
-              />
+              >
+                <option value="">Select Semester</option>
+                {[1,2,3,4,5,6,7,8].map(sem => (
+                  <option key={sem} value={sem.toString()}>Semester {sem}</option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -227,20 +257,22 @@ export default function ScholarshipRegistrationForm({
                 name="reason"
                 value={formData.reason}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 border rounded-md"
+                className="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 rows={4}
+                placeholder="Please explain why you are applying for this scholarship..."
                 required
               />
             </div>
+            
 
             <button
               type="submit"
-              className={`w-full bg-blue-600 text-white py-3 rounded-md font-semibold ${
-                isSubmitting ? "cursor-not-allowed opacity-50" : "hover:bg-blue-700"
-              }`}
               disabled={isSubmitting}
+              className={`w-full bg-blue-600 text-white py-3 rounded-md font-semibold transition ${
+                isSubmitting ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-700"
+              }`}
             >
-              {isSubmitting ? "Submitting..." : "Submit"}
+              {isSubmitting ? "Submitting..." : "Submit Registration"}
             </button>
           </form>
         )}

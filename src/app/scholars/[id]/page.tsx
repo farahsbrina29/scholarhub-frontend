@@ -1,36 +1,46 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "react-toastify";
 import {
   getScholarshipStatus,
   formatCustomDate,
 } from "@/utility/scholarshipdatautility";
-import { scholarAPI } from "@/services/api";
+import { scholarAPI, authAPI } from "@/services/api";
 
 export default function ScholarDetail() {
   const params = useParams();
+  const router = useRouter();
   const [scholarship, setScholarship] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchScholarship = async () => {
       try {
+        // Cek apakah user login
+        await authAPI.me();
+        
         const id = params?.id as string;
         const data = await scholarAPI.getById(id);
         setScholarship(data);
-      } catch (error) {
-        console.error("Gagal mengambil data beasiswa:", error);
-        toast.error("Gagal memuat data beasiswa.");
+      } catch (error: any) {
+        console.error("Error:", error);
+
+        if (error?.response?.status === 401) {
+          toast.error("Session expired. Please login again.");
+          router.push("/login");
+        } else {
+          toast.error("Gagal memuat data beasiswa.");
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchScholarship();
-  }, [params]);
+  }, [params, router]);
 
   if (isLoading) {
     return <div className="text-center py-16 text-gray-500 text-base">Loading...</div>;

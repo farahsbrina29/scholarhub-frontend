@@ -1,4 +1,3 @@
-// app/scholars/page.tsx  (atau pages/scholars/index.tsx jika pakai pages/)
 "use client";
 
 import React, { useState, useEffect } from "react";

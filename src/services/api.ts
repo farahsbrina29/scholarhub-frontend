@@ -4,16 +4,14 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  withCredentials: true, // ⬅️ ini wajib agar cookies dikirim otomatis
+  withCredentials: true, 
   headers: {
     'Content-Type': 'application/json',
   },
   timeout: 10000,
 });
 
-// ⛔ Tidak perlu inject token dari localStorage
-// Karena kamu pakai httpOnly cookies yang dikirim otomatis
-
+// Response interceptor untuk handle refresh token
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -23,6 +21,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
+        console.log('🔄 Attempting token refresh...');
         const res = await axios.post(`${API_BASE_URL}/auth/refresh`, {}, {
           withCredentials: true,
           headers: {
@@ -30,10 +29,14 @@ api.interceptors.response.use(
           },
         });
 
+        console.log('✅ Token refreshed successfully');
         return api(originalRequest); // Ulangi request asli
       } catch (refreshError) {
         console.error('🔁 Gagal refresh token:', refreshError);
-        window.location.href = '/auth/login';
+        // Clear any stored auth state
+        if (typeof window !== 'undefined') {
+          window.location.href = '/auth/login';
+        }
       }
     }
 
@@ -43,54 +46,115 @@ api.interceptors.response.use(
 
 export const authAPI = {
   login: async (email: string, password: string) => {
-    const response = await api.post('/auth/login', { email, password });
-    return response.data;
+    try {
+      console.log('🔐 Attempting login for:', email);
+      const response = await api.post('/auth/login', { email, password });
+      console.log('✅ Login successful:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Login failed:', error);
+      throw error;
+    }
   },
+
   register: async (name: string, email: string, password: string) => {
-    const response = await api.post('/auth/register', { name, email, password });
-    return response.data;
+    try {
+      const response = await api.post('/auth/register', { name, email, password });
+      return response.data;
+    } catch (error) {
+      console.error('❌ Register failed:', error);
+      throw error;
+    }
   },
   
   logout: async () => {
-  const response = await api.post('/auth/logout', {}, { withCredentials: true });
-  return response.data;
-},
+    try {
+      console.log('🚪 Attempting logout...');
+      const response = await api.post('/auth/logout', {});
+      console.log('✅ Logout successful');
+      return response.data;
+    } catch (error) {
+      console.error('❌ Logout failed:', error);
+      throw error;
+    }
+  },
 
   me: async () => {
-    const response = await api.get('/auth/me');
-    return response.data;
-  },
-  refreshToken: async () => {
-    const response = await api.post('/auth/refresh');
-    return response.data;
+    try {
+      console.log('👤 Fetching user data...');
+      console.log('🍪 Cookies available:', document.cookie);
+      
+      const response = await api.get('/auth/me');
+      console.log('✅ User data fetched:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Failed to fetch user data:', error);
+      throw error;
+    }
   },
 
-  adminOnly: async () => {
-    const response = await axios.get(`/auth/admin-only`, {
-      withCredentials: true,
-    });
-    return response.data;
+  refreshToken: async () => {
+    try {
+      const response = await api.post('/auth/refresh');
+      return response.data;
+    } catch (error) {
+      console.error('❌ Refresh token failed:', error);
+      throw error;
+    }
+  },
+
+  // Check auth status
+  checkStatus: async () => {
+    try {
+      const response = await api.get('/auth/status');
+      return response.data;
+    } catch (error) {
+      console.error('❌ Check status failed:', error);
+      throw error;
+    }
   }
+
 };
+
 export const userAPI = {
   getAll: async () => {
-    const res = await api.get('/user'); // GET semua user (ADMIN)
-    return res.data;
+    try {
+      const res = await api.get('/user');
+      return res.data;
+    } catch (error) {
+      console.error('❌ Get all users failed:', error);
+      throw error;
+    }
   },
 
   getById: async (id: number) => {
-    const res = await api.get(`/user/${id}`); // GET user by ID (ADMIN only)
-    return res.data;
+    try {
+      const res = await api.get(`/user/${id}`);
+      return res.data;
+    } catch (error) {
+      console.error(`❌ Get user ${id} failed:`, error);
+      throw error;
+    }
   },
 
   update: async (id: number, data: { name?: string; email?: string; password?: string }) => {
-    const res = await api.patch(`/user/${id}`, data);
-    return res.data;
+    try {
+      const res = await api.patch(`/user/${id}`, data);
+      return res.data;
+    } catch (error) {
+      console.error(`❌ Update user ${id} failed:`, error);
+      throw error;
+    }
   },
 
   delete: async (id: number) => {
-    const res = await api.delete(`/user/${id}`);
-    return res.data;
+    try {
+      const res = await api.delete(`/user/${id}`);
+      return res.data;
+    } catch (error) {
+      console.error(`❌ Delete user ${id} failed:`, error);
+      throw error;
+    }
   },
 }
 
@@ -99,24 +163,53 @@ export const userAPI = {
 // ======================
 export const scholarAPI = {
   getAll: async () => {
-    const response = await api.get('/scholar');
-    return response.data;
+    try {
+      const response = await api.get('/scholar');
+      return response.data;
+    } catch (error) {
+      console.error('❌ Get all scholars failed:', error);
+      throw error;
+    }
   },
+
   getById: async (id: string) => {
-    const response = await api.get(`/scholar/${id}`);
-    return response.data;
+    try {
+      const response = await api.get(`/scholar/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`❌ Get scholar ${id} failed:`, error);
+      throw error;
+    }
   },
+
   create: async (scholarData: any) => {
-    const response = await api.post('/scholar', scholarData);
-    return response.data;
+    try {
+      const response = await api.post('/scholar', scholarData);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Create scholar failed:', error);
+      throw error;
+    }
   },
+
   update: async (id: string, scholarData: any) => {
-    const response = await api.put(`/scholar/${id}`, scholarData);
-    return response.data;
+    try {
+      const response = await api.put(`/scholar/${id}`, scholarData);
+      return response.data;
+    } catch (error) {
+      console.error(`❌ Update scholar ${id} failed:`, error);
+      throw error;
+    }
   },
+
   delete: async (id: string) => {
-    const response = await api.delete(`/scholar/${id}`);
-    return response.data;
+    try {
+      const response = await api.delete(`/scholar/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`❌ Delete scholar ${id} failed:`, error);
+      throw error;
+    }
   },
 };
 
@@ -125,53 +218,135 @@ export const scholarAPI = {
 // ================================
 export const scholarRegistAPI = {
   getAll: async () => {
-    const response = await api.get('/scholar-regist');
-    return response.data;
+    try {
+      const response = await api.get('/scholar-regist');
+      return response.data;
+    } catch (error) {
+      console.error('❌ Get all scholar registrations failed:', error);
+      throw error;
+    }
   },
+
   getById: async (id: number) => {
-    const response = await api.get(`/scholar-regist/${id}`);
-    return response.data;
+    try {
+      const response = await api.get(`/scholar-regist/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`❌ Get scholar registration ${id} failed:`, error);
+      throw error;
+    }
   },
+
   create: async (data: any) => {
-    const response = await api.post('/scholar-regist', data);
-    return response.data;
+    try {
+      const response = await api.post('/scholar-regist', data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Create scholar registration failed:', error);
+      throw error;
+    }
   },
+
   update: async (id: number, data: any) => {
-    const response = await api.put(`/scholar-regist/${id}`, data);
-    return response.data;
+    try {
+      const response = await api.put(`/scholar-regist/${id}`, data);
+      return response.data;
+    } catch (error) {
+      console.error(`❌ Update scholar registration ${id} failed:`, error);
+      throw error;
+    }
   },
+
   delete: async (id: number) => {
-    const response = await api.delete(`/scholar-regist/${id}`);
-    return response.data;
+    try {
+      const response = await api.delete(`/scholar-regist/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`❌ Delete scholar registration ${id} failed:`, error);
+      throw error;
+    }
+  },
+  
+  getByUserId: async (userId: number) => {
+    try {
+      const response = await api.get(`/scholar-regist/user/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error(`❌ Get scholar registrations for user ${userId} failed:`, error);
+      throw error;
+    }
   },
 };
-// src/services/api.ts
 
 export const workshopAPI = {
   getAll: async () => {
-    const response = await api.get('/workshop');
-    return response.data;
+    try {
+      const response = await api.get('/workshop');
+      return response.data;
+    } catch (error) {
+      console.error('❌ Get all workshops failed:', error);
+      throw error;
+    }
   },
 
   getById: async (id: number) => {
-    const response = await api.get(`/workshop/${id}`);
-    return response.data;
+    try {
+      const response = await api.get(`/workshop/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`❌ Get workshop ${id} failed:`, error);
+      throw error;
+    }
   },
 
   create: async (workshopData: any) => {
-    const response = await api.post('/workshop', workshopData);
-    return response.data;
+    try {
+      const response = await api.post('/workshop', workshopData);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Create workshop failed:', error);
+      throw error;
+    }
   },
 
   update: async (id: number, workshopData: any) => {
-    const response = await api.patch(`/workshop/${id}`, workshopData);
-    return response.data;
+    try {
+      const response = await api.patch(`/workshop/${id}`, workshopData);
+      return response.data;
+    } catch (error) {
+      console.error(`❌ Update workshop ${id} failed:`, error);
+      throw error;
+    }
   },
 
   delete: async (id: number) => {
-    const response = await api.delete(`/workshop/${id}`);
-    return response.data;
+    try {
+      const response = await api.delete(`/workshop/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`❌ Delete workshop ${id} failed:`, error);
+      throw error;
+    }
   },
+};
+
+// ======================
+// Utility functions
+// ======================
+
+// Helper untuk debug cookies
+export const debugCookies = () => {
+  if (typeof document !== 'undefined') {
+    console.log('🍪 Current cookies:', document.cookie);
+    const cookies = document.cookie.split(';').reduce((acc, cookie) => {
+      const [key, value] = cookie.trim().split('=');
+      acc[key] = value;
+      return acc;
+    }, {} as Record<string, string>);
+    console.log('🍪 Parsed cookies:', cookies);
+    return cookies;
+  }
+  return {};
 };
 
 // ======================

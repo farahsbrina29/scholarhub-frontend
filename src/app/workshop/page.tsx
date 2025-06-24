@@ -1,11 +1,19 @@
-'use client';
+"use client";
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/footer';
-import { workshopAPI } from '@/services/api';
-import { toast } from 'react-toastify';
+import { workshopAPI, authAPI } from '@/services/api';
+import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+
+interface User {
+  id: number;
+  email: string;
+  name?: string;
+  role: 'USER' | 'ADMIN';
+}
 
 interface Workshop {
   id: string;
@@ -16,25 +24,66 @@ interface Workshop {
 }
 
 export default function WorkshopPage() {
-  const [workshops, setWorkshops] = useState<Workshop[]>([]);
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
+  const [workshops, setWorkshops] = useState<Workshop[]>([]);
 
+  // Check authentication and role
   useEffect(() => {
-    (async () => {
+    const checkAuth = async () => {
       try {
-        const data = await workshopAPI.getAll();
-        setWorkshops(data);
-      } catch (error) {
-        console.error('Error fetching workshops:', error);
-        toast.error('Fail fetch workshop');
+        const res = await authAPI.me();
+        const userObj = res.user ?? res;
+        if (userObj.role !== 'USER') {
+          toast.error('Akses hanya untuk pengguna.');
+          router.push('/admin');
+          return;
+        }
+        setUser(userObj);
+      } catch {
+        try {
+          const refreshRes = await authAPI.refreshToken();
+          const userObj = refreshRes.user ?? refreshRes;
+          if (userObj.role !== 'USER') {
+            toast.error('Akses hanya untuk pengguna.');
+            router.push('/auth/login');
+            return;
+          }
+          setUser(userObj);
+        } catch {
+          router.push('/auth/login');
+        }
       } finally {
-        setIsLoading(false);
+        setIsCheckingAuth(false);
       }
-    })();
-  }, []);
+    };
+    checkAuth();
+  }, [router]);
+
+  // Fetch workshops
+  useEffect(() => {
+    if (isCheckingAuth === false) {
+      (async () => {
+        try {
+          const data = await workshopAPI.getAll();
+          setWorkshops(data);
+        } catch (error) {
+          console.error('Error fetching workshops:', error);
+          toast.error('Fail fetch workshop');
+        } finally {
+          setIsLoading(false);
+        }
+      })();
+    }
+  }, [isCheckingAuth]);
+
+
 
   return (
     <>
+      <ToastContainer />
       <Navbar />
       <main className="min-h-screen bg-gray-50 py-12 px-4 sm:px-8 md:px-16">
         <section className="max-w-5xl mx-auto bg-white rounded-lg shadow-md p-8">

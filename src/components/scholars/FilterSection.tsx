@@ -28,20 +28,6 @@ const FilterSection: React.FC<FilterSectionProps> = ({
         <div className="dropdown-icon">▼</div>
       </div>
 
-      <div className="dropdown-wrapper">
-        <select
-          className="styled-dropdown"
-          value={selectedJenis}
-          onChange={(e) => setSelectedJenis(e.target.value)}
-        >
-          <option value="">Jenis Beasiswa</option>
-          <option value="Akademik">Akademik</option>
-          <option value="Non Akademik">Non Akademik</option>
-          <option value="Bantuan">Bantuan</option>
-          <option value="Penelitian">Penelitian</option>
-        </select>
-        <div className="dropdown-icon">▼</div>
-      </div>
     </div>
   );
 };

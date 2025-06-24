@@ -15,38 +15,50 @@ export default function Login() {
   const router = useRouter();
 
   const handleLogIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+  e.preventDefault();
+  setIsLoading(true);
 
-    try {
-      await authAPI.login(email, password);
-      const res = await authAPI.me();
-      const role = res.user?.role || "USER";
-      const targetPath = role === "ADMIN" ? "/admin" : "/";
+  try {
+    await authAPI.login(email, password);
 
-      toast.success("Login success!", {
-        position: "top-center",
-        autoClose: 1500,
-        onClose: () => router.push(targetPath),
-      });
+    // ❗Tunda dulu sebelum panggil /auth/me, agar cookie access_token tersimpan
+    setTimeout(async () => {
+      try {
+        const res = await authAPI.me();
+        const role = res.user?.role || "USER";
+        const targetPath = role === "ADMIN" ? "/admin" : "/";
 
-      setTimeout(() => router.push(targetPath), 1600);
-    } catch (error: any) {
-      const errorMessage =
-        error?.response?.data?.message?.includes("Invalid")
-          ? "Email or password wrong"
-          : error?.message?.includes("Network") || error?.message?.includes("Failed to fetch")
-          ? "Check your network"
-          : error.message || "Login gagal.";
+        toast.success("Login success!", {
+          position: "top-center",
+          autoClose: 1500,
+          onClose: () => router.push(targetPath),
+        });
+      } catch (err) {
+        console.error("Gagal ambil user setelah login:", err);
+        toast.error("Login berhasil, tapi gagal ambil data user", {
+          position: "top-center",
+          autoClose: 3000,
+        });
+      }
+    }, 300); // jeda 300ms agar cookie terset
 
-      toast.error(errorMessage, {
-        position: "top-center",
-        autoClose: 4000,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  } catch (error: any) {
+    const errorMessage =
+      error?.response?.data?.message?.includes("Invalid")
+        ? "Email or password wrong"
+        : error?.message?.includes("Network") || error?.message?.includes("Failed to fetch")
+        ? "Check your network"
+        : error.message || "Login gagal.";
+
+    toast.error(errorMessage, {
+      position: "top-center",
+      autoClose: 4000,
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen flex bg-[#143F6B]">

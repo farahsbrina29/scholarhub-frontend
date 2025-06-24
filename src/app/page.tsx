@@ -60,7 +60,7 @@ export default function Home() {
         const refreshRes = await authAPI.refreshToken();
         if (refreshRes.user) {
           if (refreshRes.user.role !== 'USER') {
-            toast.error('Akses hanya untuk pengguna.');
+            toast.error('Access Denied');
             router.push('/auth/login'); 
             return;
           }
@@ -90,8 +90,8 @@ export default function Home() {
         const data = await scholarAPI.getAll();
         setScholarships(Array.isArray(data) ? data : []);
       } catch (error: any) {
-        console.error('❌ Gagal memuat beasiswa:', error);
-        toast.error('Gagal memuat data beasiswa.', {
+        console.error('❌ Fail load scholar:', error);
+        toast.error('Fail load scholar.', {
           position: 'top-center',
           autoClose: 3000,
         });
@@ -123,8 +123,8 @@ export default function Home() {
 
     const isActiveMatch =
       selectedActiveFilters.length === 0 ||
-      (selectedActiveFilters.includes('Masih Berlangsung') && status === 'Active') ||
-      (selectedActiveFilters.includes('Akan Berakhir') && status === 'Inactive');
+      (selectedActiveFilters.includes('On Going') && status === 'Active') ||
+      (selectedActiveFilters.includes('Inactive') && status === 'Inactive');
 
     const isCategoryMatch =
       selectedCategoryFilters.length === 0 ||
@@ -133,17 +133,6 @@ export default function Home() {
     return isActiveMatch && isCategoryMatch;
   });
 
-  if (isCheckingAuth) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-14 w-14 border-b-2 border-blue-500 mx-auto mb-6"></div>
-          <h2 className="text-xl font-bold text-gray-800">Memverifikasi sesi...</h2>
-          <p className="text-sm text-gray-500">Mohon tunggu sebentar.</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div>
@@ -166,7 +155,6 @@ export default function Home() {
             handleFilterChange={handleFilterChange}
             resetFilters={() => {
               setSelectedActiveFilters([]);
-              setSelectedCategoryFilters([]);
             }}
           />
 
@@ -174,7 +162,7 @@ export default function Home() {
             {isLoading ? (
               <div className="text-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-gray-600 text-lg">Memuat data beasiswa...</p>
+                <p className="text-gray-600 text-lg">Load scholar...</p>
               </div>
             ) : filteredScholarships.length > 0 ? (
               <>
@@ -204,13 +192,13 @@ export default function Home() {
             ) : (
               <div className="text-center py-12">
                 <p className="text-gray-400 text-lg font-medium mb-4">
-                  Tidak ada beasiswa yang tersedia saat ini.
+                   Scholar not available
                 </p>
                 <button
                   onClick={() => window.location.reload()}
                   className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                 >
-                  Muat Ulang
+                  Refresh
                 </button>
               </div>
             )}

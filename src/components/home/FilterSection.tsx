@@ -53,7 +53,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
         </button>
         {isActiveDropdownOpen && (
           <div className="mt-2 space-y-2">
-            {["On Going", "Will Expired"].map((option) => (
+            {["On Going", "Inactive"].map((option) => (
               <label
                 key={option}
                 className="flex items-center space-x-2 text-black"

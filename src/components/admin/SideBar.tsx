@@ -18,7 +18,7 @@ export default function AdminSidebar() {
   const handleLogout = async () => {
   try {
     await authAPI.logout(); // 🔐 Panggil endpoint logout
-    toast.success('Berhasil logout', {
+    toast.success('Logout Success', {
       position: 'top-center',
       autoClose: 1500,
     });
@@ -26,7 +26,7 @@ export default function AdminSidebar() {
       router.push('/auth/login');
     }, 1600);
   } catch (error) {
-    toast.error('Gagal logout. Silakan coba lagi.');
+    toast.error('Fail Logout');
   }
 };
 

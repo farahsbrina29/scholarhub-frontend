@@ -19,7 +19,7 @@ export function parseCustomDate(dateString: string) {
   return new Date(year, month - 1, day); // Bulan dikurangi 1 karena indeks bulan mulai dari 0
 }
 
-// Format objek Date menjadi "20 November 2024"
+
 export function formatCustomDate(dateString: string) {
   const date = new Date(dateString); // langsung dari ISO string
   const day = date.getDate();
@@ -28,15 +28,16 @@ export function formatCustomDate(dateString: string) {
   return `${day} ${month} ${year}`;
 }
 
-export function getScholarshipStatus(
-  startDate: string,
-  endDate: string
-): string {
+export function getScholarshipStatus(startDate: string, endDate: string): string {
   const today = new Date();
-  const start = new Date(startDate); // langsung dari ISO string
-  const end = new Date(endDate);
-  return today >= start && today <= end ? "Active" : "Inactive";
+  const todayStr = today.toISOString().split('T')[0]; 
+  const startStr = new Date(startDate).toISOString().split('T')[0];
+  const endStr = new Date(endDate).toISOString().split('T')[0];
+
+  return todayStr >= startStr && todayStr <= endStr ? "Active" : "Inactive";
 }
+
+
 
 export function sortScholarshipsByDate(
   scholarships: Array<{

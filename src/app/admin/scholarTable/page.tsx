@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   MaterialReactTable,
@@ -20,7 +20,7 @@ import {
   DialogActions,
   TextField,
 } from '@mui/material';
-import { Delete, Edit } from '@mui/icons-material';
+import { Delete, Edit, Person } from '@mui/icons-material';
 import { toast, ToastContainer } from 'react-toastify';
 import { scholarAPI, authAPI } from '@/services/api';
 import AdminSidebar from '@/components/admin/SideBar';
@@ -58,7 +58,7 @@ export default function ScholarTablePage() {
       const result = await scholarAPI.getAll();
       setData(result);
     } catch {
-      toast.error('Fail fetch sholars');
+      toast.error('Fail fetch scholars');
     } finally {
       setLoading(false);
     }
@@ -81,19 +81,21 @@ export default function ScholarTablePage() {
         }
       }
     };
-
     validateAdmin();
   }, [router]);
 
-  const columns = useMemo<MRT_ColumnDef<Scholar>[]>(() => [
-    { accessorKey: 'scholarName', header: 'Scholar Name' },
-    { accessorKey: 'description', header: 'Description' },
-    { accessorKey: 'category', header: 'Category' },
-    { accessorKey: 'scholarRequirement', header: 'Requirement' },
-    { accessorKey: 'contact', header: 'Contact' },
-    { accessorKey: 'startDate', header: 'Start Date' },
-    { accessorKey: 'endDate', header: 'End Date' },
-  ], []);
+  const columns = useMemo<MRT_ColumnDef<Scholar>[]>(
+    () => [
+      { accessorKey: 'scholarName', header: 'Scholar Name' },
+      { accessorKey: 'description', header: 'Description' },
+      { accessorKey: 'category', header: 'Category' },
+      { accessorKey: 'scholarRequirement', header: 'Requirement' },
+      { accessorKey: 'contact', header: 'Contact' },
+      { accessorKey: 'startDate', header: 'Start Date' },
+      { accessorKey: 'endDate', header: 'End Date' },
+    ],
+    []
+  );
 
   const handleOpenDialog = (row?: MRT_Row<Scholar>) => {
     if (row) {
@@ -102,8 +104,8 @@ export default function ScholarTablePage() {
         scholarName: row.original.scholarName,
         description: row.original.description,
         category: row.original.category,
-        scholarRequirement : row.original.scholarRequirement,
-        contact : row.original.contact,
+        scholarRequirement: row.original.scholarRequirement,
+        contact: row.original.contact,
         startDate: row.original.startDate,
         endDate: row.original.endDate,
       });
@@ -173,9 +175,14 @@ export default function ScholarTablePage() {
                     <Edit />
                   </IconButton>
                 </Tooltip>
-                <Tooltip title="Hapus">
+                <Tooltip title="Delete">
                   <IconButton onClick={() => handleDelete(row.original.id)}>
                     <Delete />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="View Registrations">
+                  <IconButton onClick={() => router.push(`/admin/scholarTable/${row.original.id}`)}>
+                    <Person />
                   </IconButton>
                 </Tooltip>
               </Box>
@@ -188,7 +195,7 @@ export default function ScholarTablePage() {
           />
 
           <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-            <DialogTitle>{editingRow ? 'Edit Beasiswa' : 'Tambah Beasiswa'}</DialogTitle>
+            <DialogTitle>{editingRow ? 'Edit Scholarship' : 'Add Scholarship'}</DialogTitle>
             <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
               <TextField
                 label="Scholar Name"
